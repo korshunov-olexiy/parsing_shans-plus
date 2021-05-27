@@ -1,9 +1,5 @@
 # coding=utf-8
-# from requests_html import HTML
-# from datetime import datetime
-# import xlwt
-# from xlwt import Workbook
-# import urllib.request #, urllib.parse, urllib.error
+
 import sys, os, inspect
 import configparser as INI
 import re
@@ -20,9 +16,13 @@ def get_script_dir(follow_symlinks=True):  # Получить путь к это
         path = os.path.realpath(path)
     return os.path.dirname(path) + os.path.sep
 
-# View GUI-message with title, text and configured buttons
+# View or GUI-message with title, text and configured buttons or simple print
 def ShowMessage(title, text, btn_icon):
-    return ctypes.windll.user32.MessageBoxW(0, text, title, btn_icon)
+    # if system is Windows
+    if os.name == 'nt':
+        return ctypes.windll.user32.MessageBoxW(0, text, title, btn_icon)
+    else:
+        print(text)
 
 # получаем адреса разделов с объявлениями которые нужно обработать
 def get_config(cnf_file):
@@ -37,8 +37,8 @@ def get_config(cnf_file):
         config['PAGES_LOAD']['cnt_items'] = '30'
         config['URLS'] = {}  # сначала создаем раздел 'URLS', а потом в этом разделе создаем секцию 'list_of_categories'
         config['URLS']['list_of_categories'] = "http://shansplus.com.ua/ad-category/nedvizhimost/kvartiryi-prodazha/101/page/,http://shansplus.com.ua/ad-category/nedvizhimost/kvartiryi-prodazha/102/page/,http://shansplus.com.ua/ad-category/nedvizhimost/kvartiryi-prodazha/103/page/,http://shansplus.com.ua/ad-category/nedvizhimost/kvartiryi-prodazha/104/page/,http://shansplus.com.ua/ad-category/nedvizhimost/kvartiryi-prodazha/105/page/,http://shansplus.com.ua/ad-category/nedvizhimost/kvartiryi-prodazha/106/page/,http://shansplus.com.ua/ad-category/nedvizhimost/doma-dachi-uchastki-prodazha/160/page/,http://shansplus.com.ua/ad-category/nedvizhimost/doma-dachi-uchastki-prodazha/165/page/"
-        config['xpath'] = {} # сначала создаем раздел 'xpath', а потом в этом разделе создаем секцию 'xpath'
-        config['xpath']['ad_xpath'] = "/html/body/div[1]/div[4]/div/div/div[2]/div[{}]/div/div[2]/p[3]"
+        #config['xpath'] = {} # сначала создаем раздел 'xpath', а потом в этом разделе создаем секцию 'xpath'
+        #config['xpath']['ad_xpath'] = "/html/body/div[1]/div[4]/div/div/div[2]/div[{}]/div/div[2]/p[3]"
         try:
             with open(cnf_file, 'w', encoding='utf8') as configfile:
                 config.write(configfile)
@@ -47,9 +47,9 @@ def get_config(cnf_file):
             exit(-1)
     params = {}
     params['list_of_categories'] = config['URLS']['list_of_categories'].split(',')
-    params['ad_xpath'] = config['xpath']['ad_xpath']
+    #params['ad_xpath'] = config['xpath']['ad_xpath']
     params['cnt_pages'] = int(config['PAGES_LOAD']['cnt_pages'])
-    params['cnt_items'] = int(config['PAGES_LOAD']['cnt_items'])
+    #params['cnt_items'] = int(config['PAGES_LOAD']['cnt_items'])
     params['name_of_out_file'] = config['MAIN']['name_of_out_file']
     params['save_to_excel'] = int(config['MAIN']['save_to_excel'])
     return params
