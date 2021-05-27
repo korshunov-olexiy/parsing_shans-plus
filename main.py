@@ -1,11 +1,11 @@
 # coding=utf-8
-# import main function from file function.py
+
 import own_function as mainFunc
-import re, urllib.request #sys, os, inspect
-import xlwt
+import re, urllib.request
 from xlwt import Workbook
 from requests_html import HTML
 from datetime import datetime
+from bs4 import BeautifulSoup as bs
 
 # класс констант для окна сообщений функции ShowMessage
 class _Const(object):
@@ -17,6 +17,7 @@ class _Const(object):
 
 # константы для окна сообщений - функция ShowMessage
 CONST = _Const()
+
 today_now = datetime.now().strftime("%d%m%Y-%H%M%S")
 cur_date = datetime.now().strftime("%d.%m.%Y")
 current_path = mainFunc.get_script_dir()
@@ -31,25 +32,18 @@ mainFunc.create_table(conn, """CREATE TABLE IF NOT EXISTS notices(id integer PRI
 cnf_params = mainFunc.get_config(config_file)
 # список адресов сайта shansplus.com.ua, по которым будут собираться объявления
 list_categories = cnf_params['list_of_categories']
-# единый xpath-путь к объявлениям на страницах сайта
-site_xpath = cnf_params['ad_xpath']
 # кол-во страниц одного раздела для просмотра
 cnt_pages = cnf_params['cnt_pages']
-# кол-во объявлений на каждой странице
-cnt_items = cnf_params['cnt_items']
 name_of_out_file = cnf_params['name_of_out_file']
 # если save_to_excel = 1 - выводить результат в книгу Excel, иначе в html-файл
 save_to_excel = cnf_params['save_to_excel']
-
-if save_to_excel == 1:  # если выводим в Excel, то расширение создаваемого файла - .xls, иначе - .htm
-    ext_file = '.xls'
-else:
-    ext_file = '.htm'
+# если выводим в Excel, то расширение создаваемого файла - ".xls", иначе - ".htm"
+ext_file = '.xls' if save_to_excel == 1 else '.htm'
 
 # получаем объявления по адресам с подготовленного списка категорий
 k = 0
 for url_category in list_categories:
-    i=1
+    i = 1
     sheet_line = -1  # номер строки на листе Excel
     while i <= cnt_pages:
         try:
@@ -75,35 +69,30 @@ for url_category in list_categories:
             #return str(e.reason)
             break
         except Exception:
-            import traceback
             #mainFunc.ShowMessage('generic exception', traceback.format_exc(), CONST.MB_OK | CONST.ICON_EXLAIM)
-            break
+            #import traceback
             #return traceback.format_exc()
-        j=1
-        while j<=cnt_items:
-            # Find all notice on the page
-            clr = html.xpath(site_xpath.format( str(j) ), first=True)
-            if clr is None: # если не удалось получить текст объявления - выдать ошибку и выйти из цикла
-                break
-            # паттерны для поиска цены в объявлении
-            # search_pattern = [r'\d{1,}\ у\.е\.\ \–\ \d{1,}\ грн\.', r'\d{1,}\ у\.е\.\ \–\ \d{1,}млн\.\ грн\.', r'\d{1,}\ у\.е\.\ \–\ \d{1,}\ млн\.\ грн\.', r'\$\d{1,}\ тыс\.\ \–\ \d{1,}\ грн\.', r'\$\d{1,}\ \–\ \d{1,}\ грн\.', r'\d{1,}\ грн\.']
+            break
+
+        html = bs(html.html, 'html.parser')
+        for elem in html.body.findAll('div', attrs={'class':'post-right full'}):
+            clr = elem.find('p', attrs={'class': 'post-desc'}).text[:-1]
+            if clr is None: break
             search_pattern = [r'[\d\,\.]{1,}[ \t]{0,}(?:млн|тис|тыс){0,}[\.]{0,}[ \t]{0,}грн[\.]{0,}', r'\$[ \t]{0,}[\d\,\.]{1,}', r'[\d\,\.]{1,}[ \t]{0,}(?:у\.е\.|уе\.|у\.е|уе)']
-            for pattern in search_pattern:  # пытаемся найти цену в объявлении
-                price = re.search(pattern, clr.text)
+            for pattern in search_pattern:
+                price = re.search(pattern, clr)
                 if bool(price):  # если мы нашли цену, т.е. True
-                    price = price.group(0) #сохраняем 1-ое найденное значение (других по идее не должно и быть)
+                    price = price.group(0)
                     break
-            if price is None:  # если не нашли цены ни по одному паттерну - записать пустую строку
-                price = ''
-            # Находим все телефоны в объявлении (считаем, что после " т. " в объявлении идут номера телефонов)
+                if price is None:
+                    price = ''
             try:
-                tlfs = clr.text.split(sep=' т. ', maxsplit=1)[1].replace(' ','')  # получаем подстроку с номерами телефонов
+                tlfs = clr.split(sep=' т. ', maxsplit=1)[1].replace(' ','')  # получаем подстроку с номерами телефонов  
                 tlfs = re.sub(r'[^\d\-\,].+$', '', tlfs)  # очищаем номера телефонов от лишних символов вконце
             except:
                 tlfs = ''
             try:
-                # получаем объявление, убирая номера телефонов
-                notice = re.search(r'(.+)т\.\ ', clr.text).group(1)
+                notice = re.search(r'(.+)т\.\ ', clr).group(1)
                 split_notice = notice.split(', ', maxsplit=1)
                 notice_area = split_notice[0] # Area (street, district & etc...)
                 try:
@@ -112,7 +101,6 @@ for url_category in list_categories:
                     notice_info = ''
             except:
                 notice = None
-            # если в базе номеров риэлторов данного номера телефона нету (т.е. это номер тлф частного лица)
             if mainFunc.is_in_reality_db(current_path, tlfs) == False:
                 # Создаем запрос, который отбирает такие же записи в базе (если они есть)
                 sql_notice = "SELECT site, area, notice FROM notices WHERE (site = '" + name_site + "' AND area = '" + notice_area + "' AND notice = '" + notice_info + "');"
@@ -149,8 +137,8 @@ for url_category in list_categories:
                         sheets.write( sheet_line, 4, cur_date )
                     else:
                         f_html.write("<tr class='DataFild'><td>" + name_site + "</td><td>" + notice_area + "</td><td>" + notice_info + "</td><td>" + price + "</td><td>" + tlfs.replace(',',', ') + "</td><td>" + cur_date + "</td></tr>\n")
-            j += 1
         i += 1
+
 
 # --- завершаем запись в отчет по найденным объявлениям
 if k == 0:  # если не нашли ни одного нового объявления
