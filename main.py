@@ -122,11 +122,11 @@ for url_category in list_categories:
                         try:  # пробуем создать лист. Если он уже существует - игнорировать
                             sheets = wb.add_sheet(name_site, cell_overwrite_ok=True)
                             # настраиваем ширину колонок на листе Excel (0x10F - это примерно 1 для ширины в Excel)
-                            sheets.col(0).width = 0x10F * 23   # стоблец "улица"
-                            sheets.col(1).width = 0x10F * 115  # стоблец "объявление"
-                            sheets.col(2).width = 0x10F * 13   # стоблец "цена"
-                            sheets.col(3).width = 0x10F * 21   # стоблец "номер тлф"
-                            sheets.col(4).width = 0x10F * 10   # стоблец "дата выгрузки"
+                            sheets.col(0).width = 0x10F * 23   # столбец "улица"
+                            sheets.col(1).width = 0x10F * 115  # столбец "объявление"
+                            sheets.col(2).width = 0x10F * 13   # столбец "цена"
+                            sheets.col(3).width = 0x10F * 21   # столбец "номер тлф"
+                            sheets.col(4).width = 0x10F * 10   # столбец "дата выгрузки"
                         except:
                             pass
                         # выводим данные на лист Excel (sheet_line - номер строки, [0,1,2] - номера колонок)
