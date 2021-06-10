@@ -1,0 +1,5 @@
+xlwt
+requests_html
+bs4
+sqlite3
+configparser
